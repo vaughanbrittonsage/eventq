@@ -4,7 +4,7 @@ RUN apk add --update ca-certificates bash && update-ca-certificates && rm -rf /v
 
 RUN set -ex \
 	&& apk add --no-cache --virtual .gem-builddeps \
-		ruby-dev build-base libressl-dev \
+	ruby-dev build-base libressl-dev \
 	&& gem install -N json --version "2.1.0" \
 	&& gem install -N oj --version "3.6.10" \
 	&& gem install -N openssl --version "2.1.1" \

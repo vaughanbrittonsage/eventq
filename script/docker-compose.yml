@@ -17,9 +17,11 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=mock_id
       - AWS_SECRET_ACCESS_KEY=mock_password
-      - AWS_REGION=eu-west-1
-      - AWS_SQS_ENDPOINT=http://goaws:4576
-      - AWS_SNS_ENDPOINT=http://goaws:4575
+      - AWS_REGION=us-east-1
+      # - AWS_SQS_ENDPOINT=http://goaws:4576
+      # - AWS_SNS_ENDPOINT=http://goaws:4575
+      - AWS_SQS_ENDPOINT=http://sqs:9324
+      - AWS_SNS_ENDPOINT=http://sns:9911
 #    env_file:
 #      - ../.aws.env
 
@@ -32,11 +34,38 @@ services:
     container_name: eventq_redis
     ports:
       - "6379:6379"
-#  goaws:
-#    image: pafortin/goaws
-#    container_name: goaws
-#    ports:
-#      - "4100:4100"
+
+  sns:
+    image: s12v/sns
+    ports:
+    - "9911:9911"
+    depends_on:
+    - sqs
+    # networks:
+    #   default:
+    #     aliases:
+    #       - sns.dev.sageone.com
+
+  sqs:
+    image: meteogroup/sqsmock
+    ports:
+    - "9324:9324"
+    environment:
+      ELASTICMQ_HOST: 'sqs'
+    # - "9325:9325"
+    # environment:
+    #   NODE_HOST: "sqs.dev.sageone.com"
+    # networks:
+    #   default:
+    #     aliases:
+    #       - sqs.dev.sageone.com
+
+  # goaws:
+  #   image: pafortin/goaws
+  #   container_name: goaws
+  #   ports:
+  #     - "4100:4100"
+
   goaws:
     image: localstack/localstack
     container_name: goaws
