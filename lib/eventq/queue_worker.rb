@@ -113,6 +113,7 @@ module EventQ
     # @return [Symbol, MessageArgs] :accepted, :duplicate, :reject
     def process_message(block, message, retry_attempts, acceptance_args)
       abort = false
+      kill = false
       error = false
       status = nil
 
@@ -140,6 +141,9 @@ module EventQ
         if message_args.abort == true
           abort = true
           EventQ.logger.debug("[#{self.class}] - Message aborted. Id: #{message.id}.")
+        elsif message_args.kill == true
+          kill = true
+          EventQ.logger.debug("[#{self.class}] - Message killed. Id: #{message.id}.")
         else
           # accept the message as processed
           status = :accepted
@@ -156,7 +160,7 @@ module EventQ
         call_on_error_block(error: e, message: message)
       end
 
-      if error || abort
+      if error || abort || kill
         EventQ::NonceManager.failed(message.id)
         status = :reject
       else
@@ -248,6 +252,10 @@ module EventQ
       @on_retry_exceeded_block = block
     end
 
+    def on_killed(&block)
+      @on_killed_block = block
+    end
+
     def on_retry(&block)
       @on_retry_block = block
     end
@@ -262,6 +270,10 @@ module EventQ
 
     def call_on_retry_exceeded_block(message)
       call_block(:on_retry_exceeded_block, message)
+    end
+
+    def call_on_killed_block(message)
+      call_block(:on_killed_block, message)
     end
 
     def call_on_retry_block(message)

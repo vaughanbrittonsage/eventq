@@ -133,6 +133,19 @@ The on_retry_exceeded method allows you to specify a block that should execute w
 		....
 	end
 
+#### #on_killed
+
+The on_killed method allows you to specify a block that should execute whenever an event kills itself. The event object passed to the block is a **[QueueMessage]** object.
+
+**Example**
+
+    worker.on_killed do |event|
+		....
+		#Do something with the failed event
+		....
+	end
+
+
 #### #on_retry
 
 The on_retry method allows you to specify a block that should execute whenever an event fails to process and is retried. The event object passed to the block is a **[QueueMessage]** object, and the abort arg is a Boolean that specifies if the message was aborted (true or false).

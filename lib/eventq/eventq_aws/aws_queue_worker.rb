@@ -105,15 +105,9 @@ module EventQ
 
       def reject_message(queue, poller, msg, retry_attempts, message, args)
         if !queue.allow_retry || retry_attempts >= queue.max_retry_attempts
-          EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Rejected removing from queue. Message: #{serialize_message(message)}")
-
-          # remove the message from the queue so that it does not get retried again
-          poller.delete_message(msg)
-
-          if retry_attempts >= queue.max_retry_attempts
-            EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Retry attempt limit exceeded.")
-            context.call_on_retry_exceeded_block(message)
-          end
+          queue_will_not_retry_message(queue, poller, msg, message)
+        elsif args.kill
+          queue_will_kill_message(poller, msg, message)
         elsif queue.allow_retry
           retry_attempts += 1
 
@@ -135,6 +129,28 @@ module EventQ
 
           context.call_on_retry_block(message)
         end
+      end
+
+      def queue_will_not_retry_message(queue, poller, msg, message)
+        EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Rejected removing from queue. Message: #{serialize_message(message)}")
+
+        # remove the message from the queue so that it does not get retried again
+        poller.delete_message(msg)
+
+        if retry_attempts >= queue.max_retry_attempts
+          EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Retry attempt limit exceeded.")
+          context.call_on_retry_exceeded_block(message)
+        end
+      end
+
+      def queue_will_kill_message(poller, msg, message)
+        EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Rejected without retry. Message: #{serialize_message(message)}")
+
+        # remove the message from the queue so that it does not get retried again
+        poller.delete_message(msg)
+
+        EventQ.logger.error("[#{self.class}] - Message Id: #{args.id}. Message killed.")
+        context.call_on_killed_block(message)
       end
     end
   end

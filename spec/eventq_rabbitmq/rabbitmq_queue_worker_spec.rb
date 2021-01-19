@@ -235,6 +235,31 @@ RSpec.describe EventQ::RabbitMq::QueueWorker do
     end
   end
 
+  describe '#call_on_killed_block' do
+    let(:message) { double }
+    context 'when a block is specified' do
+      let(:block) { Proc.new { } }
+      before do
+        queue_worker.on_killed &block
+        allow(block).to receive(:call)
+      end
+      it 'should execute the block' do
+        expect(block).to receive(:call).with(message).once
+        queue_worker.call_on_killed_block(message)
+      end
+    end
+    context 'when a block is NOT specified' do
+      let(:block) { nil }
+      before do
+        queue_worker.on_killed &block
+      end
+      it 'should NOT execute the block' do
+        expect(block).not_to receive(:call)
+        queue_worker.call_on_killed_block(message)
+      end
+    end
+  end
+
   it 'should receive an event from the subscriber queue' do
 
     event_type = 'queue.worker.event1'

@@ -173,7 +173,7 @@ RSpec.describe EventQ::Amazon::QueueWorker, integration: true do
 
     received = false
     received_count = 0
-    received_attribute = 0;
+    received_attribute = 0
 
     # wait 1 second to allow the message to be sent and broadcast to the queue
     sleep(1)
@@ -197,6 +197,45 @@ RSpec.describe EventQ::Amazon::QueueWorker, integration: true do
     expect(received).to eq(true)
     expect(received_count).to eq(2)
     expect(received_attribute).to eq(1)
+    expect(queue_worker.running?).to eq(false)
+  end
+
+  it 'should receive an event from the subscriber queue and not retry it (kill).' do
+
+    subscriber_queue.retry_delay = 1000
+    subscriber_queue.allow_retry = true
+
+    subscription_manager.subscribe(event_type, subscriber_queue)
+    eventq_client.raise_event(event_type, message)
+
+    received = false
+    received_count = 0
+    received_attribute = 0
+
+    # wait 1 second to allow the message to be sent and broadcast to the queue
+    sleep(1)
+
+    queue_worker.start(subscriber_queue, { worker_adapter: subject, wait: false, block_process: false, client: queue_client }) do |event, args|
+      expect(event).to eq(message)
+      expect(args).to be_a(EventQ::MessageArgs)
+      received = true
+      received_count += 1
+      received_attribute = args.retry_attempts
+      EventQ.logger.debug {  "Message Received: #{event}" }
+      if received_count == 3
+        args.kill = true
+      else
+        args.abort = true
+      end
+    end
+
+    sleep(4)
+
+    queue_worker.stop
+
+    expect(received).to eq(true)
+    expect(received_count).to eq(3)
+    expect(received_attribute).to eq(2)
     expect(queue_worker.running?).to eq(false)
   end
 
